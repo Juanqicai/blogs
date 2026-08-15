@@ -6,7 +6,7 @@
 
 - [ai/](ai/README.md) — AI · 手撕 Transformer，MiniMind复现记录
 - [嵌入式/](嵌入式/README.md) — STM32，ESP32，树莓派，电机控制(PID/FOC)
-- [其他/](其他/README.md) — Python，Web
+- [其他/](其他/README.md) — Web三件套，napcat聊天机器人，godot
 - [assets/](assets/README.md) — 图片素材
 - [linux/](linux/README.md) — Linux，ROS2， docker等
 
@@ -24,39 +24,40 @@
 blogs/
 ├── ai/
 │   ├── pytorch使用/
-|   |   ├── torch
-|   |   └── torchvision
+│   │   ├── torch
+│   │   └── torchvision
 │   ├── agent应用/
-│   |   ├── LangChain /LangGraph
-│   |   └── agent接入，一些智能体工具
+│   │   ├── LangChain /LangGraph
+│   │   └── agent接入，一些智能体工具
 │   ├── 手撕Transformer/
-|   |   ├── python基础
-|   |   ├── ROPE
-|   |   ├── YARN
-|   |   ├── attention
-|   |   ├── ffn
-|   |   └── block
+│   │   ├── python基础
+│   │   ├── ROPE
+│   │   ├── YARN
+│   │   ├── attention
+│   │   ├── ffn
+│   │   └── block
 │   ├── MiniMind/
-|   |   ├── 预训练，全量微调
-|   |   └── 未完待定
-|   └── streamingVLM
+│   │   ├── 预训练，全量微调
+│   │   └── 未完待定
+│   └── streamingVLM
 ├── 嵌入式/
 │   ├── 江协科技入门
 │   ├── 小智机器人esp32端
+│   ├── pcb画板
 │   ├── 电机控制/
-|   └── 主从机械臂
+│   └── 主从机械臂
 ├── linux/
 │   ├── 安装
 │   ├── docker
-│   ├── ros2
-│   |   ├── 节点
-│   |   ├── 通信
-│   |   └── gazebo / rviz
-│   ├── screen后台进程
-│   └── 安装ikuuu
+│   ├── ros2/
+│   │   ├── 节点
+│   │   ├── 通信
+│   │   └── gazebo / rviz
+│   └── screen后台进程
 ├── 其他/
 │   ├── web三件套初识
-│   ├── napcat聊天机器人
-│   └── 
+│   ├── solidworks建模
+│   ├── godot游戏引擎3d基础入门
+│   └── napcat聊天机器人
 └── README.md
 ```
