@@ -169,7 +169,7 @@ print(result)  # Output: tensor([10, 20, 30,  4,  5])
 
 # 模型结构
 
-![LLM\-structure\.jpg](图片和附件/LLM-structure.jpg)
+![LLM\-structure\.jpg](../assets/minimind/minimind%20LLM-structure.jpg)
 
 这里将会聚焦在图中白色框的部分，仅关注模型本身，暂时不涉及tokenizer。
 
@@ -308,7 +308,7 @@ mask通常会加在qk相乘之后，将当前位置之后的数值设为负无�
 
 ps：这里的mask必须放在softmax之前，在softmax之后直接设0会导致原本的和为1关系被破坏。
 
-![截图 2026\-04\-17 21\-22\-38\.png](图片和附件/截图%202026-04-17%2021-22-38.png)
+![3Blue1Brown transformer注意力讲解.png](../assets/minimind/3Blue1Brown%20transformer注意力讲解.png)
 
 ###### 补充2：RoPE
 
@@ -332,17 +332,17 @@ RoPE的数学原理
 
 对于位置m，向量**x**=\(*x*1,*x*2\)旋转：
 
-![截图 2026\-04\-18 09\-29\-50\.png](图片和附件/截图%202026-04-18%2009-29-50.png)
+![截图 2026\-04\-18 09\-29\-50\.png](../assets/minimind/旋转矩阵计算式.png)
 
 同理位置 *n*：*Rn*\(**y**\)。
 
 计算旋转后的内积：
 
-![图片\.png](图片和附件/图片.png)
+![图片\.png](../assets/minimind/两两旋转的证明.png)
 
 化简：
 
-![图片\.png](图片和附件/图片%201.png)
+![图片\.png](../assets/minimind/相对位置证明.png)
 
 最后可以发现，因为x,y均是已知的，所以两个token之间的关系仅仅由m\-n决定
 
@@ -376,7 +376,7 @@ YaRN就是对RoPE的优化。
 
 而yarn所作的就是优化这条频率曲线，如图：
 
-![图片\.png](图片和附件/图片%202.png)
+![图片\.png](../assets/minimind/yarn效果.png)
 
 图中可以明显看见yarn针对低频部分和rope有明显变化，这一部分主要就是让位置编码在低频部分也能够保持足够的区分度。
 
@@ -562,7 +562,7 @@ ffn会先将输入进行升维，up\_linear和gate\_linear会同时升维并让g
 
 SiLU和ReLU激活函数图像
 
-![screenshot\_20260417\_090036\.png](图片和附件/screenshot_20260417_090036.png)
+![screenshot\_20260417\_090036\.png](../assets/minimind/SiLU和ReLU激活函数.png)
 
 这里用ReLU讲解会更加便于理解。激活函数就是在不同的位置为数据做不同的变换，这一点在ReLU上体现十分鲜明。
 
@@ -893,5 +893,5 @@ def train_epoch(*epoch*, *loader*, *iters*, *start_step*=0, *wandb*=None):
 
 
 
-![未命名笔记 \(1\)\_20260418\_224517\_31089\_1\.png](图片和附件/未命名笔记%20%281%29_20260418_224517_31089_1.png)
+![未命名笔记 \(1\)\_20260418\_224517\_31089\_1\.png](../assets/minimind/数据流.png)
 

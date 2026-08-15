@@ -4,11 +4,11 @@
 
 ## 索引
 
-- [ai/](ai/README.md) — AI · 手撕 Transformer，MiniMind复现记录
-- [嵌入式/](嵌入式/README.md) — STM32，ESP32，树莓派，电机控制(PID/FOC)
+- [ai/](ai/README.md) — AI，手撕 Transformer，MiniMind复现记录
+- [嵌入式/](嵌入式/README.md) — STM32，ESP32，树莓派，电机控制FOC，PID
 - [其他/](其他/README.md) — Web三件套，napcat聊天机器人，godot
 - [assets/](assets/README.md) — 图片素材
-- [linux/](linux/README.md) — Linux，ROS2， docker等
+- [linux/](linux/README.md) — Linux，ROS2，docker等
 
 
 ## 规划
@@ -52,12 +52,14 @@ blogs/
 │   ├── ros2/
 │   │   ├── 节点
 │   │   ├── 通信
-│   │   └── gazebo / rviz
+│   │   └── gazebo/rviz
 │   └── screen后台进程
 ├── 其他/
 │   ├── web三件套初识
 │   ├── solidworks建模
 │   ├── godot游戏引擎3d基础入门
+│   ├── git/github，代码版本管理
+│   ├── vscode安装配置，使用方法
 │   └── napcat聊天机器人
 └── README.md
 ```
