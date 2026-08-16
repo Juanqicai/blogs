@@ -42,7 +42,7 @@ blogs/
 │   └── streamingVLM
 ├── 嵌入式/
 │   ├── 江协科技入门
-│   ├── 小智机器人esp32端
+│   ├── 小智ai esp32端
 │   ├── pcb画板
 │   ├── 电机控制/
 │   └── 主从机械臂
@@ -53,7 +53,7 @@ blogs/
 │   │   ├── 节点
 │   │   ├── 通信
 │   │   └── gazebo/rviz
-│   └── screen后台进程
+│   └── ssh / screen后台进程
 ├── 其他/
 │   ├── web三件套初识
 │   ├── solidworks建模
