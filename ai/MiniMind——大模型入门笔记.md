@@ -2,7 +2,7 @@
 
 关于MiniMind项目:[Github链接](https://github.com/jingyaogong/minimind?tab=readme-ov-file)
 
-推荐学习视频：[视频链接](https://www.bilibili.com/video/BV1T2k6BaEeC?spm_id_from=333.788.videopod.episodes&vd_source=8704f44a88fba43c396e2910ec5bbdc8)
+推荐木乔的视频：[【2025/Minimind】Only三小时！Pytorch从零手敲大模型，架构到训练全教程](https://www.bilibili.com/video/BV1T2k6BaEeC?spm_id_from=333.788.videopod.episodes&vd_source=8704f44a88fba43c396e2910ec5bbdc8)
 
 minimind学习总结，复盘。
 
