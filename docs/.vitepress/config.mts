@@ -4,6 +4,17 @@ export default defineConfig({
   title: '一份笔记',
   description: '尽量记录学过的东西',
   cleanUrls: true,
+  ignoreDeadLinks: true,
+  srcDir: '..',
+  srcExclude: [
+    'docs/**',
+    'assets/**',
+    'scripts/**',
+    '_templates/**',
+    '_不上传的暂存/**',
+    'node_modules/**',
+    '**/activate_functions.png',
+  ],
   themeConfig: {
     nav: [
       { text: 'AI', link: '/ai/' },
