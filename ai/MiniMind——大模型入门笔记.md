@@ -893,5 +893,5 @@ def train_epoch(*epoch*, *loader*, *iters*, *start_step*=0, *wandb*=None):
 
 
 
-![未命名笔记 \(1\)\_20260418\_224517\_31089\_1\.png](../assets/minimind/数据流.png)
+![模型变量变化.png](../assets/minimind/数据流.png)
 
