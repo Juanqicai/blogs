@@ -1,6 +1,6 @@
 # MiniMind——大模型入门笔记
 
-关于MiniMind项目:[Github链接](https://github.com/jingyaogong/minimind?tab=readme-ov-file)
+关于MiniMind项目:[「大模型」2小时完全从0训练64M的小参数LLM！](https://github.com/jingyaogong/minimind?tab=readme-ov-file)
 
 推荐木乔的视频：[【2025/Minimind】Only三小时！Pytorch从零手敲大模型，架构到训练全教程](https://www.bilibili.com/video/BV1T2k6BaEeC?spm_id_from=333.788.videopod.episodes&vd_source=8704f44a88fba43c396e2910ec5bbdc8)
 
