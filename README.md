@@ -29,14 +29,13 @@ blogs/
 │   ├── agent应用/
 │   │   ├── LangChain /LangGraph
 │   │   └── agent接入，一些智能体工具
-│   ├── 手撕Transformer/
+│   ├── 手撕Transformer|MiniMind/
 │   │   ├── python基础
 │   │   ├── ROPE
 │   │   ├── YARN
 │   │   ├── attention
 │   │   ├── ffn
-│   │   └── block
-│   ├── MiniMind/
+│   │   ├── block
 │   │   ├── 预训练，全量微调
 │   │   └── 未完待定
 │   └── streamingVLM
