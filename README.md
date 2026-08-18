@@ -10,7 +10,6 @@
 - [assets/](assets/README.md) — 图片素材
 - [linux/](linux/README.md) — Linux，ROS2，docker等
 
-
 ## 规划
 
 大一入学到现在放假进入准大二，本次计划总结目前已经学习的技术。
@@ -21,7 +20,7 @@
 
 也是给自己挖了一个大坑，加油吧！
 
-```
+``` 目录结构
 blogs/
 ├── ai/
 │   ├── pytorch使用/
