@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="三自由机械臂">
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="1.648E-17 0 0.018965"
+        rpy="0 0 0" />
+      <mass
+        value="0.1184" />
+      <inertia
+        ixx="0.0001069"
+        ixy="8.1737E-20"
+        ixz="9.2434E-22"
+        iyy="0.0001069"
+        iyz="-1.758E-23"
+        izz="0.00019075" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://三自由机械臂/meshes/base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://三自由机械臂/meshes/base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="J1_link">
+    <inertial>
+      <origin
+        xyz="-0.010556 -4.1633E-17 0.029109"
+        rpy="0 0 0" />
+      <mass
+        value="0.093043" />
+      <inertia
+        ixx="2.9702E-05"
+        ixy="4.6057E-21"
+        ixz="3.1002E-06"
+        iyy="3.1808E-05"
+        iyz="1.5704E-21"
+        izz="2.9922E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://三自由机械臂/meshes/J1_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://三自由机械臂/meshes/J1_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="J1"
+    type="revolute">
+    <origin
+      xyz="0 0 0.051"
+      rpy="0 0 -0.0271617826143098" />
+    <parent
+      link="base_link" />
+    <child
+      link="J1_link" />
+    <axis
+      xyz="0 0 -1" />
+    <limit
+      lower="-3"
+      upper="3"
+      effort="1.2"
+      velocity="2" />
+  </joint>
+  <link
+    name="J2_link">
+    <inertial>
+      <origin
+        xyz="4.3993E-15 0.084058 -0.010047"
+        rpy="0 0 0" />
+      <mass
+        value="0.099725" />
+      <inertia
+        ixx="5.8224E-05"
+        ixy="5.294E-22"
+        ixz="-4.1293E-21"
+        iyy="3.1329E-05"
+        iyz="1.2062E-05"
+        izz="5.2569E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://三自由机械臂/meshes/J2_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://三自由机械臂/meshes/J2_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="J2"
+    type="revolute">
+    <origin
+      xyz="0.0145646597277771 0 0.0329999999999919"
+      rpy="1.5707963267949 0.0276086495626297 1.5707963267949" />
+    <parent
+      link="J1_link" />
+    <child
+      link="J2_link" />
+    <axis
+      xyz="0 0 -1" />
+    <limit
+      lower="-2"
+      upper="2"
+      effort="1.2"
+      velocity="2" />
+  </joint>
+  <link
+    name="J3_link">
+    <inertial>
+      <origin
+        xyz="-0.0038563 0.024731 0.0020185"
+        rpy="0 0 0" />
+      <mass
+        value="0.0075405" />
+      <inertia
+        ixx="5.5311E-06"
+        ixy="7.0675E-07"
+        ixz="-8.0378E-08"
+        iyy="5.2084E-07"
+        iyz="6.704E-08"
+        izz="6.0063E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://三自由机械臂/meshes/J3_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://三自由机械臂/meshes/J3_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="J3"
+    type="revolute">
+    <origin
+      xyz="0 0.0929999999999982 0.0139999999999999"
+      rpy="0 0.179853499792478 3.00667972183486" />
+    <parent
+      link="J2_link" />
+    <child
+      link="J3_link" />
+    <axis
+      xyz="0.178885438199983 0 -0.983869910099907" />
+    <limit
+      lower="-6"
+      upper="6"
+      effort="1"
+      velocity="2" />
+  </joint>
+</robot>
