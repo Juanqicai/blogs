@@ -7,7 +7,7 @@
 - [ai/](ai/README.md) — AI，手撕 Transformer，MiniMind复现记录
 - [嵌入式/](嵌入式/README.md) — STM32，ESP32，树莓派，电机控制FOC，PID
 - [其他/](其他/README.md) — Web三件套，napcat聊天机器人，godot
-- [assets/](assets/README.md) — 图片素材
+- [assets/](assets/README.md) — 素材
 - [linux/](linux/README.md) — Linux，ROS2，docker等
 
 ## 规划

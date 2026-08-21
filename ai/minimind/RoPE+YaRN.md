@@ -101,9 +101,11 @@ YaRN就是对RoPE的优化。
 #                原始RoPE用1e4，LLaMA-3.1用5e5(128k)，这里1e6大致对应32k
 # rope_scaling : None=原生RoPE；dict=启用YaRN，各键含义见下方字典内的注释
 def precompute_freqs_cis(dim: int, end: int = int(32 * 1024), rope_base: float = 1e6, rope_scaling: dict = None):
-    #这里的rope就决定了大模型的最大输出长度。相当于底子。
+    #这里的end（预计算表长度）决定了大模型支持的最大输出长度。相当于底子。
     #这个是根据数据集的样本平均长度决定的，通常会比平均长度稍微多一点
-    #L_max≈rope_base^(2/d)，这里设定1e6说明标准rope最大支持32k上下文。使用yarn可以推广到64k-128k
+    #rope_base越大，最低频分量的波长越长（λ_max≈2π·rope_base），能覆盖的上下文越长，
+    #所以1e6这类大base是长上下文模型的常见选择（如Qwen2的32k、DeepSeek的128k）。
+    #使用yarn可以在此基础上推广到64k-128k
     freqs, attn_factor = 1.0 / (rope_base ** (torch.arange(0, dim, 2)[: (dim // 2)].float() / dim)), 1.0
 
     #----------------------------------

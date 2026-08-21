@@ -3,19 +3,21 @@ import matplotlib
 import matplotlib.pyplot as plt
 from scipy.special import erf
 
-matplotlib.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei", "DejaVu Sans"]
+matplotlib.rcParams["font.sans-serif"] = ["Noto Sans CJK SC", "Microsoft YaHei", "SimHei", "DejaVu Sans"]
 matplotlib.rcParams["axes.unicode_minus"] = False
 
 x = np.linspace(-6, 6, 1000)
 
+# 只画"一元标量激活函数"的曲线。
+# SwiGLU 是门控结构（gate/up 两个线性映射 + 逐元素乘），不是一元函数；
+# Softmax 是对整个向量的归一化，也不是标量函数。两者都不适合用一元曲线表示，
+# 故不在此生成（SwiGLU 结构示意图见 assets/minimind/minimnd SwiGLU.png）。
 common = [
     (r"Sigmoid  $\sigma(x)=\frac{1}{1+e^{-x}}$", lambda t: 1 / (1 + np.exp(-t))),
     (r"Tanh  $\tanh(x)$",                        lambda t: np.tanh(t)),
     (r"ReLU  $\max(0,x)$",                       lambda t: np.maximum(0, t)),
     (r"GELU  $x\Phi(x)$",                        lambda t: t * 0.5 * (1 + erf(t / np.sqrt(2)))),
     (r"SiLU  $x\sigma(x)$",                      lambda t: t / (1 + np.exp(-t))),
-    (r"SwiGLU  $SiLU(x)\cdot x$",                lambda t: (t / (1 + np.exp(-t))) * t),
-    (r"Softmax  $p(x)=\frac{e^x}{1+e^x}$",      lambda t: 1 / (1 + np.exp(-t))),
 ]
 
 for i, (title, f) in enumerate(common, start=1):

@@ -5,7 +5,7 @@
 
 - [RMSNorm](./RMSNorm.md)
 - [Attention（GQA）](./attention.md)
-- [Feed Foward Network（FFN）](./ffn.md)
+- [Feed Forward Network（FFN）](./ffn.md)
 
 这里主要列一下block和其他封装，把 FFN 和 GQA 拼接起来，这就是一个 transformer。
 
@@ -25,7 +25,7 @@ class MiniMindBlock(nn.Module):
     def forward(self, hidden_states, position_embeddings, past_key_value=None, use_cache=False, attention_mask=None):
         #这里包含了两个残差连接，两种写法等价。
         #核心原理就是在开始之前先保存一下开始的状态，然后把变换之后的状态和开始的状态相加
-        #为什么有效？可以理解为y=kx和y=kx+b。有了b，模型可以专心拟合曲率，减少拟合压力。
+        #为什么有效？梯度可以沿恒等分支无损回传，缓解深层网络的梯度消失/爆炸；同时每层只需学习"残差"（变化量），优化更容易。
         residual = hidden_states
         hidden_states, present_key_value = self.self_attn(
             self.input_layernorm(hidden_states), position_embeddings,

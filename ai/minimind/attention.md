@@ -14,7 +14,7 @@ $\operatorname{Attention}(Q, K, V) = \operatorname{softmax}\left( \frac{QK^T}{\s
 
 attention会将一个输入同时做3个不同的线性映射。这三个线性映射分别命名为Q,K,V（query，key，value）。
 
-这里的Q是查询头，K是键，V是权重。
+这里的 Q 是查询（Query），K 是键（Key），V 是值（Value），也就是被提取的信息内容。
 
 attention的实现逻辑大致就是用q查询k，然后将最契合的值从v中提取出来。
 
@@ -22,9 +22,9 @@ attention的实现逻辑大致就是用q查询k，然后将最契合的值从v�
 
 这里就可以看公式了
 
-$\frac{QK^T}{\sqrt{d_k}}$这就是做查询。qk相乘之后就会得到不同位置的张量的重要程度。除以根号下k的个数来控制方差。
+$\frac{QK^T}{\sqrt{d_k}}$这就是做查询。qk相乘之后就会得到不同位置的张量的重要程度。除以 $\sqrt{d_k}$（d_k 是键向量的维度，即 head_dim）来控制方差。
 
-这里的q和k都要求是均值为0，方差为1的一组张量，以让相乘的结果矩阵的方差为1。
+在理想情况下，希望 Q、K 的分布方差保持稳定；除以 √d_k 是为了缩放点积结果，避免数值过大导致 softmax 进入饱和区。
 
 这样经过softmax之后，即可以突出重点，又不会一家独大最合适的数值。可以让模型更加稳定。
 
@@ -163,7 +163,7 @@ def forward(self, x, position_embeddings, past_key_value=None, use_cache=False, 
         #xq，xk过一次归一化，稳定数据。
         xq, xk = self.q_norm(xq), self.k_norm(xk)
         #为xq和xk添加位置信息，在这里添加是因为xk之后会保存下来成为记忆。xq也需要根据位置信息做计算。
-        #这里的position_embeddings是是前面预计算的结果
+        #这里的position_embeddings是前面预计算的结果
         cos, sin = position_embeddings
         xq, xk = apply_rotary_pos_emb(xq, xk, cos, sin)
         #如果有kv缓存

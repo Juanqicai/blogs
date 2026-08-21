@@ -1,4 +1,4 @@
-# Feed Foward Network
+# Feed Forward Network
 
 前馈神经网络，负责将attention提取到的信息进行推理。
 
@@ -16,7 +16,7 @@ ffn会先将输入进行升维，up\_linear和gate\_linear会同时升维并让g
 
 ## 激活函数
 
-激活函数就是为大模型带来推理能力的核心，如果没有激活函数，模型失去非线性，退化为单层网络。y=k1\(k2\*x\)=k3\*x
+激活函数就是为大模型带来推理能力的核心，如果没有激活函数，模型失去非线性，退化为单层网络。y=k1·(k2·x)=(k1·k2)·x=k3·x
 
 SiLU和ReLU激活函数图像
 
@@ -24,7 +24,7 @@ SiLU和ReLU激活函数图像
 
 这里用ReLU讲解会更加便于理解。激活函数就是在不同的位置为数据做不同的变换，这一点在ReLU上体现十分鲜明。
 
-在大于0的部分，ReLU会将数据对应的乘一个x，数据越大，处理的幅度越大，所以ReLU对偏移较大的数据的敏感度较大。
+在大于0的部分，ReLU的输出等于输入，数据越大输出幅度越大（但斜率恒为1，敏感度不变）。
 
 在小于0的部分，ReLU就会将数据全部归为0，可以理解为将所有无效或者权重较低的信息过滤掉。这样就会突出有效的信息。
 
@@ -36,7 +36,7 @@ SiLU和ReLU激活函数图像
 
 ffn中的线性映射会先将输入数据升维到intermediate\_size大小。在处理之后再缩回原本的hidden\_size大小。
 
-实际使用通常设置为hidden\_stated的4倍大小
+实际使用通常设置为hidden\_size的4倍大小
 
 可以理解为人类思考时候脑海内部的抽象空间。
 
@@ -65,7 +65,7 @@ class FeedForward(nn.Module):
         self.down_proj = nn.Linear(intermediate_size, config.hidden_size, bias=False)   # 下采样层（down），压缩回隐藏维度
         self.up_proj = nn.Linear(config.hidden_size, intermediate_size, bias=False)     # 升维层（up），扩张到高维空间
         self.act_fn = ACT2FN[config.hidden_act]                                         # 激活函数（MiniMind 用 SiLU）
-        *self*.dropout = nn.Dropout(*config*.dropout)                                   # 随机丢弃，防止过拟合
+        self.dropout = nn.Dropout(config.dropout)                                       # 随机丢弃，防止过拟合
 
     def forward(self, x):
         # 1. gate 分支：线性映射 -> SiLU 激活，产出"门控"决定保留多少信息

@@ -29,13 +29,13 @@ import torch
 
 t1=torch.tensor([[1,2,3],[4,5,6]])
 t2=torch.tensor([[7,8,9],[10,11,12]])
-result=torch.cat((t1,t2),*dim*=0)
+result=torch.cat((t1,t2),dim=0)
 print(result)  
 #tensor([[ 1,  2,  3],
 #        [ 4,  5,  6],
 #        [ 7,  8,  9],
 #        [10, 11, 12]])
-result2=torch.cat((t1,t2),*dim*=1)
+result2=torch.cat((t1,t2),dim=1)
 print(result2)  
 # tensor([[ 1,  2,  3,  7,  8,  9],
 #         [ 4,  5,  6, 10, 11, 12]])
@@ -51,7 +51,7 @@ print(result2)
 import torch
 import torch.nn as nn
 
-dropout_layer = nn.Dropout(*p*=0.5)
+dropout_layer = nn.Dropout(p=0.5)
 
 t1=torch.Tensor([1,2,3])
 t2=dropout_layer(t1)
@@ -67,7 +67,7 @@ print(t2)#假设丢弃1,输出tensor([0 , 4., 6.])
 import torch
 import torch.nn as nn
 
-layer = nn.Linear(*in_features*=3, *out_features*=5, *bias*=True)
+layer = nn.Linear(in_features=3, out_features=5, bias=True)
 t1 = torch.Tensor([1, 2, 3])  # shape: (3,)
 
 t2 = torch.Tensor([[1, 2, 3]])  # shape: (1, 3)
@@ -147,7 +147,7 @@ reshape会对内存中不连续的数进行复制并放在其他地方。
 
 view只会对原本内存中连续的数进行操作，不复制。例如经过transpose的操作就会破环在内存中的连续性。
 
-可以通过`t.is_contiguous()`重新调整内存。
+可以通过`t.contiguous()`重新调整内存（必要时复制数据到连续内存）；`t.is_contiguous()`只是检查是否连续，并不会改变内存布局。
 
 ## where
 
@@ -184,27 +184,27 @@ print(result)  # Output: tensor([10, 20, 30,  4,  5])
 ### RMSNorm
 
 ```Python
-class RMSNorm(*torch*.*nn*.Module):
-    def __init__(*self*, *dim*: int, *eps*: float = 1e-5):
+class RMSNorm(torch.nn.Module):
+    def __init__(self, dim: int, eps: float = 1e-5):
         super().__init__()
-        *self*.eps = *eps*
+        self.eps = eps
         self.dim = dim
-        *self*.weight = nn.Parameter(torch.ones(*dim*))
+        self.weight = nn.Parameter(torch.ones(dim))
 
-    def norm(*self*, *x*):
-        return *x* * torch.rsqrt(*x*.pow(2).mean(-1, *keepdim*=True) + *self*.eps)
+    def norm(self, x):
+        return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
 
-    def forward(*self*, *x*):
-        return (*self*.weight * *self*.norm(*x*.float())).type_as(*x*)
+    def forward(self, x):
+        return (self.weight * self.norm(x.float())).type_as(x)
 ```
 
-归一化，将标准差变1。
+归一化，将均方根（RMS）变为1。
 
 公式：
 
 $y_i = \frac{x_i}{\sqrt{\frac{1}{n} \sum_{j=1}^{n} (x_j)^2 + \varepsilon}} \cdot \gamma$
 
-这里添加ε主要是为了防止分母过小导致的梯度爆炸，也是防止分母为0。一种增强鲁棒性措施。
+这里添加ε主要是为了防止分母为零（例如整行输入全为0时）导致的数值不稳定。一种增强鲁棒性措施。
 
 最后乘γ是对处理后数据进行自行缩放，一般放入优化器中自动优化
 
@@ -236,9 +236,9 @@ attention的实现逻辑大致就是用q查询k，然后将最契合的值从v�
 
 这里就可以看公式了
 
-$\frac{QK^T}{\sqrt{d_k}}$这就是做查询。qk相乘之后就会得到不同位置的张量的重要程度。除根下k的个数来控制方差。
+$\frac{QK^T}{\sqrt{d_k}}$这就是做查询。qk相乘之后就会得到不同位置的张量的重要程度。除以 $\sqrt{d_k}$（d_k 是键向量的维度，即 head_dim）来控制方差。
 
-这里的q和k都要求是均值为0，方差为1的一组张量，以让相乘的结果矩阵的方差为1。
+在理想情况下，希望 Q、K 的各维方差≈1，这样点积结果的方差≈d_k，除以 √d_k 后方差≈1（实际靠初始化和归一化近似满足，并非硬性要求）。
 
 这样经过softmax之后，即可以突出重点，又不会一家独大最合适的数值。可以让模型更加稳定。
 
@@ -390,52 +390,53 @@ YaRN就是对RoPE的优化。
 
 ```Python
 #预计算频率，提前将sin和cos打表，减少训练时候的计算量
-def precompute_freqs_cis(*dim*: int, *end*: int = int(32 * 1024), *rope_base*: float = 1e6, *rope_scaling*: dict = None):
-    #这里的rope就决定了大模型的最大输出长度。相当于底子。
+def precompute_freqs_cis(dim: int, end: int = int(32 * 1024), rope_base: float = 1e6, rope_scaling: dict = None):
+    #这里的end（预计算表长度）决定了大模型支持的最大输出长度。相当于底子。
     #这个是根据数据集的样本平均长度决定的，通常会比平均长度稍微多一点
-    #*L_*max≈rope_base^(2/*d)这里设定1e6说明标准rope最大支持32k上下文。使用yarn可以推广到64k-128k*
-    freqs, attn_factor = 1.0 / (*rope_base* ** (torch.arange(0, *dim*, 2)[: (*dim* // 2)].float() / *dim*)), 1.0
-    if *rope_scaling* is not None: # YaRN: f'(i) = f(i)((1-γ) + γ/s), where γ∈[0,1] is linear ramp
+    #rope_base越大，最低频分量的波长越长（λ_max≈2π·rope_base），能覆盖的上下文越长，
+    #所以1e6这类大base是长上下文模型的常见选择（如Qwen2的32k、DeepSeek的128k）。使用yarn可以推广到64k-128k
+    freqs, attn_factor = 1.0 / (rope_base ** (torch.arange(0, dim, 2)[: (dim // 2)].float() / dim)), 1.0
+    if rope_scaling is not None: # YaRN: f'(i) = f(i)((1-γ) + γ/s), where γ∈[0,1] is linear ramp
         orig_max, factor, beta_fast, beta_slow, attn_factor = (
-            *rope_scaling*.get("original_max_position_embeddings", 2048), 
-            *rope_scaling*.get("factor", 16),
-            *rope_scaling*.get("beta_fast", 32.0), 
-            *rope_scaling*.get("beta_slow", 1.0), 
-            *rope_scaling*.get("attention_factor", 1.0)
+            rope_scaling.get("original_max_position_embeddings", 2048), 
+            rope_scaling.get("factor", 16),
+            rope_scaling.get("beta_fast", 32.0), 
+            rope_scaling.get("beta_slow", 1.0), 
+            rope_scaling.get("attention_factor", 1.0)
         )#设定参数
         #仅当最大序列长度超过模型支持最大序列长度时开启
-        if *end* / orig_max > 1.0:
+        if end / orig_max > 1.0:
             #自动计算低频，中频，高频范围。
-            inv_dim = lambda *b*: (*dim* * math.log(orig_max / (*b* * 2 * math.pi))) / (2 * math.log(*rope_base*))
-            low, high = max(math.floor(inv_dim(beta_fast)), 0), min(math.ceil(inv_dim(beta_slow)), *dim* // 2 - 1)
+            inv_dim = lambda b: (dim * math.log(orig_max / (b * 2 * math.pi))) / (2 * math.log(rope_base))
+            low, high = max(math.floor(inv_dim(beta_fast)), 0), min(math.ceil(inv_dim(beta_slow)), dim // 2 - 1)
             #生成频率曲线
-            ramp = torch.clamp((torch.arange(*dim* // 2, *device*=freqs.device).float() - low) / max(high - low, 0.001), 0, 1)
+            ramp = torch.clamp((torch.arange(dim // 2, device=freqs.device).float() - low) / max(high - low, 0.001), 0, 1)
             freqs = freqs * (1 - ramp + ramp / factor)
-    t = torch.arange(*end*, *device*=freqs.device)
+    t = torch.arange(end, device=freqs.device)
     freqs = torch.outer(t, freqs).float()
-    freqs_cos = torch.cat([torch.cos(freqs), torch.cos(freqs)], *dim*=-1) * attn_factor
-    freqs_sin = torch.cat([torch.sin(freqs), torch.sin(freqs)], *dim*=-1) * attn_factor
+    freqs_cos = torch.cat([torch.cos(freqs), torch.cos(freqs)], dim=-1) * attn_factor
+    freqs_sin = torch.cat([torch.sin(freqs), torch.sin(freqs)], dim=-1) * attn_factor
     return freqs_cos, freqs_sin
 ```
 
-ps：有点一知半解，不要忘了再看看
+ps（要点）：预计算阶段把每个位置的 cos/sin 一次性打表成 (end, dim) 的表，训练/推理时按位置切片直接取用，省去重复计算；dim/2 个频率对从高到低排列，高频感知近处、低频覆盖远处。
 
 
 
 ```Python
 #应用位置编码
-def apply_rotary_pos_emb(*q*, *k*, *cos*, *sin*, *unsqueeze_dim*=1):
-    def rotate_half(*x*): return torch.cat((-*x*[..., *x*.shape[-1] // 2:], *x*[..., : *x*.shape[-1] // 2]), *dim*=-1)
-    q_embed = ((*q* * *cos*.unsqueeze(*unsqueeze_dim*)) + (rotate_half(*q*) * *sin*.unsqueeze(*unsqueeze_dim*))).to(*q*.dtype)
-    k_embed = ((*k* * *cos*.unsqueeze(*unsqueeze_dim*)) + (rotate_half(*k*) * *sin*.unsqueeze(*unsqueeze_dim*))).to(*k*.dtype)
+def apply_rotary_pos_emb(q, k, cos, sin, unsqueeze_dim=1):
+    def rotate_half(x): return torch.cat((-x[..., x.shape[-1] // 2:], x[..., : x.shape[-1] // 2]), dim=-1)
+    q_embed = ((q * cos.unsqueeze(unsqueeze_dim)) + (rotate_half(q) * sin.unsqueeze(unsqueeze_dim))).to(q.dtype)
+    k_embed = ((k * cos.unsqueeze(unsqueeze_dim)) + (rotate_half(k) * sin.unsqueeze(unsqueeze_dim))).to(k.dtype)
     return q_embed, k_embed
     
 #复制多个k和v，让kv数量和q相等，做兼容
-def repeat_kv(*x*: torch.Tensor, *n_rep*: int) -> torch.Tensor:
-    bs, slen, num_key_value_heads, head_dim = *x*.shape
-    if *n_rep* == 1: return *x*
+def repeat_kv(x: torch.Tensor, n_rep: int) -> torch.Tensor:
+    bs, slen, num_key_value_heads, head_dim = x.shape
+    if n_rep == 1: return x
     #expand复制，相对于直接相乘，会节省显存。这样子操作并不会真的多复制出来维度。
-    return (*x*[:, :, :, None, :].expand(bs, slen, num_key_value_heads, *n_rep*, head_dim).reshape(bs, slen, num_key_value_heads * *n_rep*, head_dim))
+    return (x[:, :, :, None, :].expand(bs, slen, num_key_value_heads, n_rep, head_dim).reshape(bs, slen, num_key_value_heads * n_rep, head_dim))
 ```
 
 这里要复制k和v，让他们的数量和q对等起来。
@@ -445,34 +446,34 @@ def repeat_kv(*x*: torch.Tensor, *n_rep*: int) -> torch.Tensor:
 
 
 ```Python
-class Attention(*nn*.Module):
-    def __init__(*self*, *config*: MiniMindConfig):
+class Attention(nn.Module):
+    def __init__(self, config: MiniMindConfig):
         super().__init__()
         #设定头相关参数
-        *self*.num_key_value_heads = *config*.num_attention_heads if *config*.num_key_value_heads is None else *config*.num_key_value_heads
-        *self*.n_local_heads = *config*.num_attention_heads
-        *self*.n_local_kv_heads = *self*.num_key_value_heads
+        self.num_key_value_heads = config.num_attention_heads if config.num_key_value_heads is None else config.num_key_value_heads
+        self.n_local_heads = config.num_attention_heads
+        self.n_local_kv_heads = self.num_key_value_heads
         #计算需要复制kv的倍数
-        *self*.n_rep = *self*.n_local_heads // *self*.n_local_kv_heads
+        self.n_rep = self.n_local_heads // self.n_local_kv_heads
         #头的维度
-        *self*.head_dim = *config*.head_dim
+        self.head_dim = config.head_dim
         #因果掩码设定
-        *self*.is_causal = True
+        self.is_causal = True
         #qk矩阵，由于本质就是线性映射，所以可以一个用线性层一次性全部初始化，之后再修改形状。
-        *self*.q_proj = nn.Linear(*config*.hidden_size, *config*.num_attention_heads * *self*.head_dim, *bias*=False)
-        *self*.k_proj = nn.Linear(*config*.hidden_size, *self*.num_key_value_heads * *self*.head_dim, *bias*=False)
-        *self*.v_proj = nn.Linear(*config*.hidden_size, *self*.num_key_value_heads * *self*.head_dim, *bias*=False)
+        self.q_proj = nn.Linear(config.hidden_size, config.num_attention_heads * self.head_dim, bias=False)
+        self.k_proj = nn.Linear(config.hidden_size, self.num_key_value_heads * self.head_dim, bias=False)
+        self.v_proj = nn.Linear(config.hidden_size, self.num_key_value_heads * self.head_dim, bias=False)
         #最后输出前的线性层
-        *self*.o_proj = nn.Linear(*config*.num_attention_heads * *self*.head_dim, *config*.hidden_size, *bias*=False)
+        self.o_proj = nn.Linear(config.num_attention_heads * self.head_dim, config.hidden_size, bias=False)
         #归一化
-        *self*.q_norm = RMSNorm(*self*.head_dim, *eps*=*config*.rms_norm_eps)
-        *self*.k_norm = RMSNorm(*self*.head_dim, *eps*=*config*.rms_norm_eps)
+        self.q_norm = RMSNorm(self.head_dim, eps=config.rms_norm_eps)
+        self.k_norm = RMSNorm(self.head_dim, eps=config.rms_norm_eps)
         #这些是其他处理，放在计划拼接的部分
-        *self*.attn_dropout = nn.Dropout(*config*.dropout)
-        *self*.resid_dropout = nn.Dropout(*config*.dropout)
-        *self*.dropout = *config*.dropout
+        self.attn_dropout = nn.Dropout(config.dropout)
+        self.resid_dropout = nn.Dropout(config.dropout)
+        self.dropout = config.dropout
         #计算加速的库，知道就好了，计算点乘用的时候带上。
-        *self*.flash = hasattr(torch.nn.functional, 'scaled_dot_product_attention') and *config*.flash_attn
+        self.flash = hasattr(torch.nn.functional, 'scaled_dot_product_attention') and config.flash_attn
 ```
 
 初始化
@@ -480,47 +481,47 @@ class Attention(*nn*.Module):
 
 
 ```Python
-def forward(*self*, *x*, *position_embeddings*, *past_key_value*=None, *use_cache*=False, *attention_mask*=None):
+def forward(self, x, position_embeddings, past_key_value=None, use_cache=False, attention_mask=None):
         #提取输入矩阵的形状，不着急，后面的数据流会有展示，可以对照。
-        bsz, seq_len, _ = *x*.shape
+        bsz, seq_len, _ = x.shape
         #这里做线性映射
-        xq, xk, xv = *self*.q_proj(*x*), *self*.k_proj(*x*), *self*.v_proj(*x*)
+        xq, xk, xv = self.q_proj(x), self.k_proj(x), self.v_proj(x)
         #这里的xq，xk，xv就包含了多头的结果（前面初始化把多头一次性全部包括了）。
         #这里修改形状，方便后面点积。
-        xq = xq.view(bsz, seq_len, *self*.n_local_heads, *self*.head_dim)
-        xk = xk.view(bsz, seq_len, *self*.n_local_kv_heads, *self*.head_dim)
-        xv = xv.view(bsz, seq_len, *self*.n_local_kv_heads, *self*.head_dim)
+        xq = xq.view(bsz, seq_len, self.n_local_heads, self.head_dim)
+        xk = xk.view(bsz, seq_len, self.n_local_kv_heads, self.head_dim)
+        xv = xv.view(bsz, seq_len, self.n_local_kv_heads, self.head_dim)
         #xq，xk过一次归一化，稳定数据。
-        xq, xk = *self*.q_norm(xq), *self*.k_norm(xk)
+        xq, xk = self.q_norm(xq), self.k_norm(xk)
         #为xq和xk添加位置信息，在这里添加是因为xk之后会保存下来成为记忆。xq也需要根据位置信息做计算。
-        #这里的*position_embeddings是是前面预计算的结果*
-        cos, sin = *position_embeddings*
+        #这里的position_embeddings是前面预计算的结果
+        cos, sin = position_embeddings
         xq, xk = apply_rotary_pos_emb(xq, xk, cos, sin)
         #如果有kv缓存
-        if *past_key_value* is not None:
+        if past_key_value is not None:
             #把历史kv和当前kv拼接，这样子attention就可以关注以前的信息
-            xk = torch.cat([*past_key_value*[0], xk], *dim*=1)
-            xv = torch.cat([*past_key_value*[1], xv], *dim*=1)
+            xk = torch.cat([past_key_value[0], xk], dim=1)
+            xv = torch.cat([past_key_value[1], xv], dim=1)
         #把处理后的kv作为输出，相当于整理的一下内存，并且把现在的kv也加入到了缓存里面。
         #这样子内存分配连续，更有利于gpu计算
-        past_kv = (xk, xv) if *use_cache* else None
+        past_kv = (xk, xv) if use_cache else None
         #变换维度，并且匹配qkv的数量
-        xq, xk, xv = (xq.transpose(1, 2), repeat_kv(xk, *self*.n_rep).transpose(1, 2), repeat_kv(xv, *self*.n_rep).transpose(1, 2))
+        xq, xk, xv = (xq.transpose(1, 2), repeat_kv(xk, self.n_rep).transpose(1, 2), repeat_kv(xv, self.n_rep).transpose(1, 2))
         #使用优化后的库
-        if *self*.flash and (seq_len > 1) and (not *self*.is_causal or *past_key_value* is None) and (*attention_mask* is None or torch.all(*attention_mask* == 1)):
-            output = F.scaled_dot_product_attention(xq, xk, xv, *dropout_p*=*self*.dropout if *self*.training else 0.0, *is_causal*=*self*.is_causal)
+        if self.flash and (seq_len > 1) and (not self.is_causal or past_key_value is None) and (attention_mask is None or torch.all(attention_mask == 1)):
+            output = F.scaled_dot_product_attention(xq, xk, xv, dropout_p=self.dropout if self.training else 0.0, is_causal=self.is_causal)
         else:
             #计算注意力权重
-            scores = (xq @ xk.transpose(-2, -1)) / math.sqrt(*self*.head_dim)
+            scores = (xq @ xk.transpose(-2, -1)) / math.sqrt(self.head_dim)
             #因果掩码
-            if *self*.is_causal: scores[:, :, :, -seq_len:] += torch.full((seq_len, seq_len), float("-inf"), *device*=scores.device).triu(1)
+            if self.is_causal: scores[:, :, :, -seq_len:] += torch.full((seq_len, seq_len), float("-inf"), device=scores.device).triu(1)
             #遮盖占位符。比如有些句子没法占满最大长度，就会用占位符占满
-            if *attention_mask* is not None: scores += (1.0 - *attention_mask*.unsqueeze(1).unsqueeze(2)) * -1e9
+            if attention_mask is not None: scores += (1.0 - attention_mask.unsqueeze(1).unsqueeze(2)) * -1e9
             #将注意力权重和v点乘，得到最后的结果，然后做其他处理
             #这里对注意力权重做了一次dropout，这里的dropout主要是为了防止模型产生过度依赖，增强鲁棒性
-            output = *self*.attn_dropout(F.softmax(scores.float(), *dim*=-1).type_as(xq)) @ xv
+            output = self.attn_dropout(F.softmax(scores.float(), dim=-1).type_as(xq)) @ xv
         output = output.transpose(1, 2).reshape(bsz, seq_len, -1)
-        output = *self*.resid_dropout(*self*.o_proj(output))
+        output = self.resid_dropout(self.o_proj(output))
         return output, past_kv
 
 ```
@@ -540,7 +541,7 @@ class FeedForward(nn.Module):
         self.down_proj = nn.Linear(intermediate_size, config.hidden_size, bias=False)
         self.up_proj = nn.Linear(config.hidden_size, intermediate_size, bias=False)
         self.act_fn = ACT2FN[config.hidden_act]
-        *self*.dropout = nn.Dropout(*config*.dropout)
+        self.dropout = nn.Dropout(config.dropout)
 
     def forward(self, x):
         return self.dropout(self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x)))
@@ -595,65 +596,65 @@ ffn中的线性映射会先将输入数据升维到intermediate\_size大小。�
 代码：
 
 ```Python
-class MiniMindBlock(*nn*.Module):
-    def __init__(*self*, *layer_id*: int, *config*: MiniMindConfig):
+class MiniMindBlock(nn.Module):
+    def __init__(self, layer_id: int, config: MiniMindConfig):
         super().__init__()
-        *self*.self_attn = Attention(*config*)
-        *self*.input_layernorm = RMSNorm(*config*.hidden_size, *eps*=*config*.rms_norm_eps)
-        *self*.post_attention_layernorm = RMSNorm(*config*.hidden_size, *eps*=*config*.rms_norm_eps)
-        *self*.mlp = FeedForward(*config*) if not *config*.use_moe else MOEFeedForward(*config*)
+        self.self_attn = Attention(config)
+        self.input_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.post_attention_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.mlp = FeedForward(config) if not config.use_moe else MOEFeedForward(config)
 
-    def forward(*self*, *hidden_states*, *position_embeddings*, *past_key_value*=None, *use_cache*=False, *attention_mask*=None):
+    def forward(self, hidden_states, position_embeddings, past_key_value=None, use_cache=False, attention_mask=None):
         #这里包含了两个残差连接，两种写法等价。
         #核心原理就是在开始之前先保存一下开始的状态，然后把变换之后的状态和开始的状态相加
         #为什么有效？可以理解为y=kx和y=kx+b。有了b，模型可以专心拟合曲率，减少拟合压力。
-        residual = *hidden_states*
-        *hidden_states*, present_key_value = *self*.self_attn(
-            *self*.input_layernorm(*hidden_states*), *position_embeddings*,
-            *past_key_value*, *use_cache*, *attention_mask*
+        residual = hidden_states
+        hidden_states, present_key_value = self.self_attn(
+            self.input_layernorm(hidden_states), position_embeddings,
+            past_key_value, use_cache, attention_mask
         )
-        *hidden_states* += residual
-        *hidden_states* = *hidden_states* + *self*.mlp(*self*.post_attention_layernorm(*hidden_states*))
-        return *hidden_states*, present_key_value
+        hidden_states += residual
+        hidden_states = hidden_states + self.mlp(self.post_attention_layernorm(hidden_states))
+        return hidden_states, present_key_value
 ```
 
 将transformer和其他层封装，生成一个模型的框架
 
 ```Python
-class MiniMindModel(*nn*.Module):
-    def __init__(*self*, *config*: MiniMindConfig):
+class MiniMindModel(nn.Module):
+    def __init__(self, config: MiniMindConfig):
         super().__init__()
-        *self*.config = *config*
-        *self*.vocab_size, *self*.num_hidden_layers = *config*.vocab_size, *config*.num_hidden_layers
-        *self*.embed_tokens = nn.Embedding(*config*.vocab_size, *config*.hidden_size)
-        *self*.dropout = nn.Dropout(*config*.dropout)
+        self.config = config
+        self.vocab_size, self.num_hidden_layers = config.vocab_size, config.num_hidden_layers
+        self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size)
+        self.dropout = nn.Dropout(config.dropout)
         #这是为了多次重复提取重要信息
-        *self*.layers = nn.ModuleList([MiniMindBlock(l, *config*) for l in range(*self*.num_hidden_layers)])#生成num_hidden_layers个block，每个block里有一个Attention和一个FeedForward（或MOEFeedForward）。
-        *self*.norm = RMSNorm(*config*.hidden_size, *eps*=*config*.rms_norm_eps)
-        freqs_cos, freqs_sin = precompute_freqs_cis(*dim*=*config*.head_dim, *end*=*config*.max_position_embeddings, *rope_base*=*config*.rope_theta, *rope_scaling*=*config*.rope_scaling)
-        *self*.register_buffer("freqs_cos", freqs_cos, *persistent*=False)
-        *self*.register_buffer("freqs_sin", freqs_sin, *persistent*=False)
+        self.layers = nn.ModuleList([MiniMindBlock(l, config) for l in range(self.num_hidden_layers)])#生成num_hidden_layers个block，每个block里有一个Attention和一个FeedForward（或MOEFeedForward）。
+        self.norm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        freqs_cos, freqs_sin = precompute_freqs_cis(dim=config.head_dim, end=config.max_position_embeddings, rope_base=config.rope_theta, rope_scaling=config.rope_scaling)
+        self.register_buffer("freqs_cos", freqs_cos, persistent=False)
+        self.register_buffer("freqs_sin", freqs_sin, persistent=False)
 
-    def forward(*self*, *input_ids*, *attention_mask*=None, *past_key_values*=None, *use_cache*=False, ***kwargs*):
-        batch_size, seq_length = *input_ids*.shape
-        if hasattr(*past_key_values*, 'layers'): *past_key_values* = None
-        *past_key_values* = *past_key_values* or [None] * len(*self*.layers)
-        start_pos = *past_key_values*[0][0].shape[1] if *past_key_values*[0] is not None else 0
-        hidden_states = *self*.dropout(*self*.embed_tokens(*input_ids*))
-        position_embeddings = (*self*.freqs_cos[start_pos:start_pos + seq_length], *self*.freqs_sin[start_pos:start_pos + seq_length])
+    def forward(self, input_ids, attention_mask=None, past_key_values=None, use_cache=False, **kwargs):
+        batch_size, seq_length = input_ids.shape
+        if hasattr(past_key_values, 'layers'): past_key_values = None
+        past_key_values = past_key_values or [None] * len(self.layers)
+        start_pos = past_key_values[0][0].shape[1] if past_key_values[0] is not None else 0
+        hidden_states = self.dropout(self.embed_tokens(input_ids))
+        position_embeddings = (self.freqs_cos[start_pos:start_pos + seq_length], self.freqs_sin[start_pos:start_pos + seq_length])
         presents = []
 
-        for layer, past_key_value in zip(*self*.layers, *past_key_values*):
+        for layer, past_key_value in zip(self.layers, past_key_values):
             hidden_states, present = layer(
                 hidden_states,
                 position_embeddings,
-                *past_key_value*=past_key_value,
-                *use_cache*=*use_cache*,
-                *attention_mask*=*attention_mask*
+                past_key_value=past_key_value,
+                use_cache=use_cache,
+                attention_mask=attention_mask
             )
             presents.append(present)
-        hidden_states = *self*.norm(hidden_states)
-        aux_loss = sum([l.mlp.aux_loss for l in *self*.layers if isinstance(l.mlp, MOEFeedForward)], hidden_states.new_zeros(1).squeeze())
+        hidden_states = self.norm(hidden_states)
+        aux_loss = sum([l.mlp.aux_loss for l in self.layers if isinstance(l.mlp, MOEFeedForward)], hidden_states.new_zeros(1).squeeze())
         return hidden_states, presents, aux_loss
 ```
 
@@ -662,22 +663,22 @@ class MiniMindModel(*nn*.Module):
 ```Python
 class MiniMindForCausalLM(PreTrainedModel, GenerationMixin):
     config_class = MiniMindConfig
-    def __init__(*self*, *config*: MiniMindConfig = None):
-        *self*.config = *config* or MiniMindConfig()
-        super().__init__(*self*.config)
-        *self*.model = MiniMindModel(*self*.config)
-        *self*.lm_head = nn.Linear(*self*.config.hidden_size, *self*.config.vocab_size, *bias*=False)
-        *self*.model.embed_tokens.weight = *self*.lm_head.weight
+    def __init__(self, config: MiniMindConfig = None):
+        self.config = config or MiniMindConfig()
+        super().__init__(self.config)
+        self.model = MiniMindModel(self.config)
+        self.lm_head = nn.Linear(self.config.hidden_size, self.config.vocab_size, bias=False)
+        self.model.embed_tokens.weight = self.lm_head.weight
     
-    def forward(*self*, *input_ids*, *attention_mask*=None, *past_key_values*=None, *use_cache*=False, *logits_to_keep*=0, *labels*=None, ***kwargs*):
-        hidden_states, *past_key_values*, aux_loss = *self*.model(*input_ids*, *attention_mask*, *past_key_values*, *use_cache*, ***kwargs*)
-        slice_indices = slice(-*logits_to_keep*, None) if isinstance(*logits_to_keep*, int) else *logits_to_keep*
-        logits = *self*.lm_head(hidden_states[:, slice_indices, :])
+    def forward(self, input_ids, attention_mask=None, past_key_values=None, use_cache=False, logits_to_keep=0, labels=None, **kwargs):
+        hidden_states, past_key_values, aux_loss = self.model(input_ids, attention_mask, past_key_values, use_cache, **kwargs)
+        slice_indices = slice(-logits_to_keep, None) if isinstance(logits_to_keep, int) else logits_to_keep
+        logits = self.lm_head(hidden_states[:, slice_indices, :])
         loss = None
-        if *labels* is not None:
-            x, y = logits[..., :-1, :].contiguous(), *labels*[..., 1:].contiguous()
-            loss = F.cross_entropy(x.view(-1, x.size(-1)), y.view(-1), *ignore_index*=-100)
-        return MoeCausalLMOutputWithPast(*loss*=loss, *aux_loss*=aux_loss, *logits*=logits, *past_key_values*=*past_key_values*, *hidden_states*=hidden_states)
+        if labels is not None:
+            x, y = logits[..., :-1, :].contiguous(), labels[..., 1:].contiguous()
+            loss = F.cross_entropy(x.view(-1, x.size(-1)), y.view(-1), ignore_index=-100)
+        return MoeCausalLMOutputWithPast(loss=loss, aux_loss=aux_loss, logits=logits, past_key_values=past_key_values, hidden_states=hidden_states)
     
 ```
 
@@ -721,29 +722,29 @@ class MiniMindForCausalLM(PreTrainedModel, GenerationMixin):
 ```Python
 if __name__ == "__main__":
     #命令行指令
-    parser = argparse.ArgumentParser(*description*="MiniMind Pretraining")
-    parser.add_argument("--save_dir", *type*=str, *default*="D:\\Microsoft VS Code\\code\\minimind\\out", *help*="模型保存目录")
-    parser.add_argument('--save_weight', *default*='pretrain', *type*=str, *help*="保存权重的前缀名")
-    parser.add_argument("--epochs", *type*=int, *default*=2, *help*="训练轮数")
-    parser.add_argument("--batch_size", *type*=int, *default*=32, *help*="batch size")
-    parser.add_argument("--learning_rate", *type*=float, *default*=5e-4, *help*="初始学习率")
-    parser.add_argument("--device", *type*=str, *default*="cuda:0" if torch.cuda.is_available() else "cpu", *help*="训练设备")
-    parser.add_argument("--dtype", *type*=str, *default*="bfloat16", *help*="混合精度类型")
-    parser.add_argument("--num_workers", *type*=int, *default*=8, *help*="数据加载线程数")
-    parser.add_argument("--accumulation_steps", *type*=int, *default*=8, *help*="梯度累积步数")
-    parser.add_argument("--grad_clip", *type*=float, *default*=1.0, *help*="梯度裁剪阈值")
-    parser.add_argument("--log_interval", *type*=int, *default*=100, *help*="日志打印间隔")
-    parser.add_argument("--save_interval", *type*=int, *default*=1000, *help*="模型保存间隔")
-    parser.add_argument('--hidden_size', *default*=768, *type*=int, *help*="隐藏层维度")
-    parser.add_argument('--num_hidden_layers', *default*=8, *type*=int, *help*="隐藏层数量")
-    parser.add_argument('--max_seq_len', *default*=340, *type*=int, *help*="训练的最大截断长度（中文1token≈1.5~1.7字符）")
-    parser.add_argument('--use_moe', *default*=0, *type*=int, *choices*=[0, 1], *help*="是否使用MoE架构（0=否，1=是）")
-    parser.add_argument("--data_path", *type*=str, *default*="D:\\Microsoft VS Code\\code\\minimind\\dataset\\pretrain_t2t_mini.jsonl", *help*="预训练数据路径")
-    parser.add_argument('--from_weight', *default*='none', *type*=str, *help*="基于哪个权重训练，为none则从头开始")
-    parser.add_argument('--from_resume', *default*=0, *type*=int, *choices*=[0, 1], *help*="是否自动检测&续训（0=否，1=是）")
-    parser.add_argument("--use_wandb", *action*="store_true", *help*="是否使用wandb")
-    parser.add_argument("--wandb_project", *type*=str, *default*="MiniMind-Pretrain", *help*="wandb项目名")
-    parser.add_argument("--use_compile", *default*=0, *type*=int, *choices*=[0, 1], *help*="是否使用torch.compile加速（0=否，1=是）")
+    parser = argparse.ArgumentParser(description="MiniMind Pretraining")
+    parser.add_argument("--save_dir", type=str, default="D:\\Microsoft VS Code\\code\\minimind\\out", help="模型保存目录")
+    parser.add_argument('--save_weight', default='pretrain', type=str, help="保存权重的前缀名")
+    parser.add_argument("--epochs", type=int, default=2, help="训练轮数")
+    parser.add_argument("--batch_size", type=int, default=32, help="batch size")
+    parser.add_argument("--learning_rate", type=float, default=5e-4, help="初始学习率")
+    parser.add_argument("--device", type=str, default="cuda:0" if torch.cuda.is_available() else "cpu", help="训练设备")
+    parser.add_argument("--dtype", type=str, default="bfloat16", help="混合精度类型")
+    parser.add_argument("--num_workers", type=int, default=8, help="数据加载线程数")
+    parser.add_argument("--accumulation_steps", type=int, default=8, help="梯度累积步数")
+    parser.add_argument("--grad_clip", type=float, default=1.0, help="梯度裁剪阈值")
+    parser.add_argument("--log_interval", type=int, default=100, help="日志打印间隔")
+    parser.add_argument("--save_interval", type=int, default=1000, help="模型保存间隔")
+    parser.add_argument('--hidden_size', default=768, type=int, help="隐藏层维度")
+    parser.add_argument('--num_hidden_layers', default=8, type=int, help="隐藏层数量")
+    parser.add_argument('--max_seq_len', default=340, type=int, help="训练的最大截断长度（中文1token≈1.5~1.7字符）")
+    parser.add_argument('--use_moe', default=0, type=int, choices=[0, 1], help="是否使用MoE架构（0=否，1=是）")
+    parser.add_argument("--data_path", type=str, default="D:\\Microsoft VS Code\\code\\minimind\\dataset\\pretrain_t2t_mini.jsonl", help="预训练数据路径")
+    parser.add_argument('--from_weight', default='none', type=str, help="基于哪个权重训练，为none则从头开始")
+    parser.add_argument('--from_resume', default=0, type=int, choices=[0, 1], help="是否自动检测&续训（0=否，1=是）")
+    parser.add_argument("--use_wandb", action="store_true", help="是否使用wandb")
+    parser.add_argument("--wandb_project", type=str, default="MiniMind-Pretrain", help="wandb项目名")
+    parser.add_argument("--use_compile", default=0, type=int, choices=[0, 1], help="是否使用torch.compile加速（0=否，1=是）")
     args = parser.parse_args()
 
     # ========== 1. 初始化环境和随机种子 ==========
@@ -752,16 +753,16 @@ if __name__ == "__main__":
     setup_seed(42 + (dist.get_rank() if dist.is_initialized() else 0))
     
     # ========== 2. 配置目录、模型参数、检查ckp ==========
-    os.makedirs(args.save_dir, *exist_ok*=True)
+    os.makedirs(args.save_dir, exist_ok=True)
         #记录了关键参数，稍后创建模型时会把它传进去。
-    lm_config = MiniMindConfig(*hidden_size*=args.hidden_size, *num_hidden_layers*=args.num_hidden_layers, *use_moe*=bool(args.use_moe))
+    lm_config = MiniMindConfig(hidden_size=args.hidden_size, num_hidden_layers=args.num_hidden_layers, use_moe=bool(args.use_moe))
         #检查记录点，决定是否续训
-    ckp_data = lm_checkpoint(lm_config, *weight*=args.save_weight, *save_dir*='D:\\Microsoft VS Code\\code\\minimind\\checkpoints') if args.from_resume==1 else None
+    ckp_data = lm_checkpoint(lm_config, weight=args.save_weight, save_dir='D:\\Microsoft VS Code\\code\\minimind\\checkpoints') if args.from_resume==1 else None
     
     # ========== 3. 设置混合精度 ==========
     device_type = "cuda" if "cuda" in args.device else "cpu"
     dtype = torch.bfloat16 if args.dtype == "bfloat16" else torch.float16
-    autocast_ctx = nullcontext() if device_type == "cpu" else torch.cuda.amp.autocast(*dtype*=dtype)
+    autocast_ctx = nullcontext() if device_type == "cpu" else torch.cuda.amp.autocast(dtype=dtype)
     
     # ========== 4. 配wandb ==========
     wandb = None
@@ -770,14 +771,14 @@ if __name__ == "__main__":
         wandb_id = ckp_data.get('wandb_id') if ckp_data else None
         resume = 'must' if wandb_id else None
         wandb_run_name = f"MiniMind-Pretrain-Epoch-{args.epochs}-BatchSize-{args.batch_size}-LearningRate-{args.learning_rate}"
-        wandb.init(*project*=args.wandb_project, *name*=wandb_run_name, *id*=wandb_id, *resume*=resume)
+        wandb.init(project=args.wandb_project, name=wandb_run_name, id=wandb_id, resume=resume)
     
     # ========== 5. 定义模型、数据、优化器 ==========
-    model, tokenizer = init_model(lm_config, args.from_weight, *device*=args.device)
-    train_ds = PretrainDataset(args.data_path, tokenizer, *max_length*=args.max_seq_len)
+    model, tokenizer = init_model(lm_config, args.from_weight, device=args.device)
+    train_ds = PretrainDataset(args.data_path, tokenizer, max_length=args.max_seq_len)
     train_sampler = DistributedSampler(train_ds) if dist.is_initialized() else None #分布式计算模式相关配置
-    scaler = torch.amp.GradScaler(*enabled*=(args.dtype == 'float16'))
-    optimizer = optim.AdamW(model.parameters(), *lr*=args.learning_rate)
+    scaler = torch.amp.GradScaler(enabled=(args.dtype == 'float16'))
+    optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate)
     
     # ========== 6. 从ckp恢复状态 ==========
     start_epoch, start_step = 0, 0
@@ -794,7 +795,7 @@ if __name__ == "__main__":
         Logger('torch.compile enabled')
     if dist.is_initialized():
         model._ddp_params_and_buffers_to_ignore = {"freqs_cos", "freqs_sin"}
-        model = DistributedDataParallel(model, *device_ids*=[local_rank])
+        model = DistributedDataParallel(model, device_ids=[local_rank])
     
     # ========== 8. 开始训练 ==========
     for epoch in range(start_epoch, args.epochs):
@@ -802,7 +803,7 @@ if __name__ == "__main__":
         setup_seed(42 + epoch); indices = torch.randperm(len(train_ds)).tolist()#单卡随机
         skip = start_step if (epoch == start_epoch and start_step > 0) else 0
         batch_sampler = SkipBatchSampler(train_sampler or indices, args.batch_size, skip)
-        loader = DataLoader(train_ds, *batch_sampler*=batch_sampler, *num_workers*=args.num_workers, *pin_memory*=True)
+        loader = DataLoader(train_ds, batch_sampler=batch_sampler, num_workers=args.num_workers, pin_memory=True)
         if skip > 0: 
             Logger(f'Epoch [{epoch + 1}/{args.epochs}]: 跳过前{start_step}个step，从step {start_step + 1}开始')
             train_epoch(epoch, loader, len(loader) + skip, start_step, wandb)
@@ -820,22 +821,22 @@ if __name__ == "__main__":
 这里也负责保存模型，显示训练进度等操作
 
 ```Python
-def train_epoch(*epoch*, *loader*, *iters*, *start_step*=0, *wandb*=None):
+def train_epoch(epoch, loader, iters, start_step=0, wandb=None):
     start_time = time.time()
-    last_step = *start_step*
-    for step, (input_ids, labels) in enumerate(*loader*, *start*=*start_step* + 1):#标记这里，不是很明白enumerate是干什么的
+    last_step = start_step
+    for step, (input_ids, labels) in enumerate(loader, start=start_step + 1):  # enumerate返回(索引,元素)对，start指定起始索引，续训时步数能接着上次继续
         print(input_ids.shape)
         input_ids = input_ids.to(args.device)
         labels = labels.to(args.device)
         last_step = step
         #调整学习率
-        lr = get_lr(*epoch* * *iters* + step, args.epochs * *iters*, args.learning_rate)
+        lr = get_lr(epoch * iters + step, args.epochs * iters, args.learning_rate)
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
 
         #混合精度训练
         with autocast_ctx:
-            res = model(input_ids, *labels*=labels)
+            res = model(input_ids, labels=labels)
             loss = res.loss + res.aux_loss
             loss = loss / args.accumulation_steps#梯度累计
 
@@ -848,21 +849,21 @@ def train_epoch(*epoch*, *loader*, *iters*, *start_step*=0, *wandb*=None):
             scaler.step(optimizer)
             scaler.update()
 
-            optimizer.zero_grad(*set_to_none*=True)
+            optimizer.zero_grad(set_to_none=True)
 
         # 计算并记录损失、学习率、预计剩余时间等
-        if step % args.log_interval == 0 or step == *iters*:
+        if step % args.log_interval == 0 or step == iters:
             spend_time = time.time() - start_time
             current_loss = loss.item() * args.accumulation_steps
             current_aux_loss = res.aux_loss.item() if res.aux_loss is not None else 0.0
             current_logits_loss = current_loss - current_aux_loss
             current_lr = optimizer.param_groups[-1]['lr']
-            eta_min = spend_time / max(step - *start_step*, 1) * (*iters* - step) // 60
-            Logger(f'Epoch:[{*epoch* + 1}/{args.epochs}]({step}/{*iters*}), loss: {current_loss:.4f}, logits_loss: {current_logits_loss:.4f}, aux_loss: {current_aux_loss:.4f}, lr: {current_lr:.8f}, epoch_time: {eta_min:.1f}min')
-            if *wandb*: *wandb*.log({"loss": current_loss, "logits_loss": current_logits_loss, "aux_loss": current_aux_loss, "learning_rate": current_lr, "epoch_time": eta_min})
+            eta_min = spend_time / max(step - start_step, 1) * (iters - step) // 60
+            Logger(f'Epoch:[{epoch + 1}/{args.epochs}]({step}/{iters}), loss: {current_loss:.4f}, logits_loss: {current_logits_loss:.4f}, aux_loss: {current_aux_loss:.4f}, lr: {current_lr:.8f}, epoch_time: {eta_min:.1f}min')
+            if wandb: wandb.log({"loss": current_loss, "logits_loss": current_logits_loss, "aux_loss": current_aux_loss, "learning_rate": current_lr, "epoch_time": eta_min})
 
         # 保存模型检查点
-        if (step % args.save_interval == 0 or step == *iters*) and is_main_process():
+        if (step % args.save_interval == 0 or step == iters) and is_main_process():
             model.eval()
             moe_suffix = '_moe' if lm_config.use_moe else ''
             ckp = f'{args.save_dir}/{args.save_weight}_{lm_config.hidden_size}{moe_suffix}.pth'
@@ -870,18 +871,18 @@ def train_epoch(*epoch*, *loader*, *iters*, *start_step*=0, *wandb*=None):
             raw_model = getattr(raw_model, '_orig_mod', raw_model)
             state_dict = raw_model.state_dict()
             torch.save({k: v.half().cpu() for k, v in state_dict.items()}, ckp)
-            lm_checkpoint(lm_config, *weight*=args.save_weight, *model*=model, *optimizer*=optimizer, *scaler*=scaler, *epoch*=*epoch*, *step*=step, *wandb*=*wandb*, *save_dir*='D:\\Microsoft VS Code\\code\\minimind\\checkpoints')
+            lm_checkpoint(lm_config, weight=args.save_weight, model=model, optimizer=optimizer, scaler=scaler, epoch=epoch, step=step, wandb=wandb, save_dir='D:\\Microsoft VS Code\\code\\minimind\\checkpoints')
             model.train()
             del state_dict
 
         del input_ids, labels, res, loss
 
-    if last_step > *start_step* and last_step % args.accumulation_steps != 0:
+    if last_step > start_step and last_step % args.accumulation_steps != 0:
         scaler.unscale_(optimizer)
         torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
         scaler.step(optimizer)
         scaler.update()
-        optimizer.zero_grad(*set_to_none*=True)
+        optimizer.zero_grad(set_to_none=True)
 
 ```
 
